@@ -4,12 +4,13 @@ import argparse
 
 CATEGORY_MAP = {
     "Images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp", ".ico"],
-    "Documents": [".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx", ".csv", ".odt"],
+    "Documents": [".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx", ".odt"],
     "Videos": [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm"],
     "Audio": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma"],
     "Archives": [".zip", ".tar", ".gz", ".rar", ".7z", ".bz2"],
-    "Code": [".py", ".js", ".ts", ".html", ".css", ".java", ".c", ".cpp", ".go", ".rs"],
-    "Data": [".json", ".xml", ".yaml", ".yml", ".sql", ".db"],
+    "Code": [".py", ".js", ".ts", ".html", ".css", ".java", ".c", ".cpp", ".go", ".rs", ".rb", ".php", ".sh"],
+    "Data": [".json", ".xml", ".yaml", ".yml", ".sql", ".db", ".csv"],
+    "Fonts": [".ttf", ".otf", ".woff", ".woff2"],
 }
 
 
