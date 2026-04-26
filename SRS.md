@@ -1,9 +1,18 @@
 # Software Requirements Specification
 
 **Project:** MicTest12-1.0
-**Version:** 1.0
+**Version:** 1.0.1
 **Date:** 2026-04-26
 **Status:** Draft
+
+## Table of Contents
+1. [Introduction](#1-introduction)
+2. [Overall Description](#2-overall-description)
+3. [Specific Requirements](#3-specific-requirements)
+4. [Acceptance Criteria](#4-acceptance-criteria-per-requirement)
+5. [Verification and Validation](#5-verification-and-validation)
+6. [Open Questions](#6-open-questions)
+7. [Appendix A. Revision History](#appendix-a-revision-history)
 
 > **Note on assumptions.** The repository currently contains only a placeholder
 > README ("Tester test 1.0"). This SRS assumes MicTest12-1.0 is a **web-based
@@ -98,6 +107,9 @@ backend services in v1.0; static assets are served from a CDN or static host.
 - Desktop and mobile form factors.
 - HTTPS origin (required by `getUserMedia`).
 - No specific OS dependency.
+- Note: `MediaRecorder` codec support varies on Safari; FR-6 mandates a
+  capability check via `MediaRecorder.isTypeSupported` and graceful fallback
+  to the UA's default container/codec.
 
 ### 2.5 Design and Implementation Constraints
 - Must run in the browser sandbox; no native binaries.
@@ -238,13 +250,20 @@ The application MUST log diagnostic events to an in-page console panel
 | --- | --- | --- |
 | FR-1 | Manual + automated | All OS-reported input devices appear in dropdown. |
 | FR-2 | Manual | Denying permission shows recovery instructions. |
-| FR-3 | Automated (synthetic tone) | 1 kHz @ −20 dBFS reads −20 ± 1 dBFS. |
+| FR-3 | Automated (synthetic tone) | 1 kHz @ −20 dBFS reads −20 ± 1 dBFS; meter updates ≥ 20 Hz. |
+| FR-4 | Automated (frame timing) | Waveform render ≥ 30 fps on desktop reference machine. |
 | FR-5 | Automated | Diagnostics values match injected stream within tolerance. |
-| FR-6 | Manual | 30 s clip records, plays, downloads. |
+| FR-6 | Manual | 30 s clip records, plays, downloads; codec falls back when needed. |
+| FR-7 | Manual | Recorded clip plays via in-page controls. |
+| FR-8 | Manual | Downloaded filename matches `mictest-<ISO timestamp>.<ext>`. |
 | FR-9 | Manual (muted mic) | Guidance appears within 5–6 s. |
+| FR-10 | Manual (hot-plug) | Device list refreshes without reload. |
+| FR-11 | Automated | After Stop, `MediaStreamTrack.readyState === 'ended'`. |
 | NFR-1 | Lighthouse / WebPageTest | FCP < 1.5 s on Moto G4 / 4G profile. |
+| NFR-2 | Manual (unplug device) | App returns to device-selection state without reload. |
 | NFR-3 | Code review + network tap | No outbound audio traffic during capture. |
 | NFR-4 | axe-core + manual SR pass | No critical violations; full keyboard flow works. |
+| NFR-6 | Cross-browser CI | E2E suite passes on supported browser matrix. |
 
 ---
 
@@ -276,3 +295,4 @@ The application MUST log diagnostic events to an in-page console panel
 | Version | Date | Author | Notes |
 | --- | --- | --- | --- |
 | 0.1 | 2026-04-26 | Claude (draft) | Initial draft based on placeholder repo. |
+| 1.0.1 | 2026-04-26 | Claude (draft) | Added TOC; expanded acceptance-criteria table to cover FR-4, FR-7, FR-8, FR-10, FR-11, NFR-2, NFR-6; noted Safari `MediaRecorder` codec caveat in §2.4. |
