@@ -2,17 +2,11 @@
 
 **Project:** MicTest12-1.0
 **Version:** 1.0
-**Date:** 2026-04-26
+**Date:** 2026-05-02
 **Status:** Draft
 
-> **Note on assumptions.** The repository currently contains only a placeholder
-> README ("Tester test 1.0"). This SRS assumes MicTest12-1.0 is a **web-based
-> microphone testing utility** that helps end users verify that their
-> microphone hardware is working, measure basic audio characteristics
-> (input level, signal-to-noise, latency), and record short test clips. The
-> document follows the IEEE 830-1998 outline. If the actual product scope is
-> different (desktop app, CLI, voice analysis, etc.), revise Sections 1.3, 2,
-> and 3 accordingly.
+> Product scope was confirmed on 2026-05-02: MicTest12-1.0 is a browser-based
+> microphone testing utility. The document follows the IEEE 830-1998 outline.
 
 ---
 
@@ -36,12 +30,19 @@ MicTest12-1.0 will:
 - Report basic diagnostics: sample rate, channel count, peak level,
   RMS level, estimated noise floor, and round-trip latency.
 - Run entirely client-side; no audio leaves the user's device.
+- Function offline after first successful load via a service-worker-cached
+  app shell.
 
 Out of scope for v1.0:
 - Server-side storage or sharing of recordings.
 - Speech-to-text, voice biometrics, or pitch/musical analysis.
 - Multi-microphone mixing.
 - Native desktop/mobile builds.
+- PWA installability prompt and in-page "update available" UX.
+- Background sync and push notifications.
+- Telemetry / analytics of any kind.
+- Advanced audio metrics (THD, frequency-response sweep, loopback latency
+  calibration).
 
 ### 1.3 Definitions, Acronyms, and Abbreviations
 | Term | Meaning |
@@ -52,6 +53,7 @@ Out of scope for v1.0:
 | RMS | Root mean square (signal level metric) |
 | SNR | Signal-to-noise ratio |
 | PWA | Progressive Web App |
+| SW | Service Worker |
 | WCAG | Web Content Accessibility Guidelines |
 | MUST / SHOULD / MAY | Requirement levels per RFC 2119 |
 
@@ -60,6 +62,7 @@ Out of scope for v1.0:
 - W3C *MediaStream Recording* (MediaRecorder API).
 - W3C *Web Audio API* (AudioContext, AnalyserNode).
 - W3C *Media Capture and Streams* (getUserMedia).
+- W3C *Service Workers*.
 - WCAG 2.1, Level AA.
 - RFC 2119, *Key words for use in RFCs to Indicate Requirement Levels*.
 
@@ -77,6 +80,8 @@ verification.
 MicTest12-1.0 is a self-contained, single-page web application. It depends on
 the browser's `getUserMedia`, Web Audio, and MediaRecorder APIs. It has no
 backend services in v1.0; static assets are served from a CDN or static host.
+The app registers a service worker that precaches its app shell so the tool
+remains usable offline after first load.
 
 ### 2.2 Product Functions (summary)
 1. Enumerate audio input devices.
@@ -85,6 +90,7 @@ backend services in v1.0; static assets are served from a CDN or static host.
 4. Compute and display diagnostics.
 5. Record, play back, and download a test clip.
 6. Expose troubleshooting guidance when no signal is detected.
+7. Cache the application shell for offline use.
 
 ### 2.3 User Classes and Characteristics
 | Class | Description | Technical skill |
@@ -102,8 +108,10 @@ backend services in v1.0; static assets are served from a CDN or static host.
 ### 2.5 Design and Implementation Constraints
 - Must run in the browser sandbox; no native binaries.
 - Audio data MUST NOT be transmitted off-device.
-- Bundle size SHOULD be < 250 KB gzipped for first load.
+- Bundle size SHOULD be < 250 KB gzipped for first load. The service-worker
+  precache MAY include additional assets beyond the first-load critical path.
 - Source must be deployable as static files.
+- UI styling is minimal/in-house; no third-party design system in v1.0.
 
 ### 2.6 Assumptions and Dependencies
 - The user has at least one functioning audio input device.
@@ -170,6 +178,17 @@ list automatically.
 The user MUST be able to stop capture at any time. Stopping MUST release
 the underlying media tracks (`MediaStreamTrack.stop()`).
 
+**FR-12 Offline app shell**
+The system MUST register a service worker on first load that precaches the
+HTML, JS, CSS, fonts, and icons required for the core mic-test flow.
+Subsequent loads MUST succeed with the network offline and reach the
+device-selection state without errors.
+
+**FR-13 Service worker update**
+When a new service-worker version activates, the system SHOULD serve the
+updated cached assets on the next navigation. v1.0 does not require an
+in-page "update available" banner.
+
 ### 3.2 Non-Functional Requirements
 
 **NFR-1 Performance**
@@ -210,6 +229,12 @@ test coverage SHOULD be ≥ 80 % for non-UI modules.
 The application MUST log diagnostic events to an in-page console panel
 (toggleable) to aid support without sending data off-device.
 
+**NFR-9 Offline reliability**
+With the network disabled after first successful load, the app MUST start
+and reach the device-selection state without errors. Microphone permission
+and capture themselves do not require network and MUST continue to work
+offline.
+
 ### 3.3 External Interface Requirements
 
 **3.3.1 User interface**
@@ -225,6 +250,8 @@ The application MUST log diagnostic events to an in-page console panel
 - `navigator.mediaDevices.getUserMedia` / `enumerateDevices`.
 - Web Audio API: `AudioContext`, `AnalyserNode`, `MediaStreamAudioSourceNode`.
 - `MediaRecorder` for clip capture.
+- Service Worker API (`navigator.serviceWorker`) and Cache Storage API for
+  the offline app shell.
 
 **3.3.4 Communications interfaces**
 - HTTPS for static asset delivery only. No application-level network
@@ -245,6 +272,9 @@ The application MUST log diagnostic events to an in-page console panel
 | NFR-1 | Lighthouse / WebPageTest | FCP < 1.5 s on Moto G4 / 4G profile. |
 | NFR-3 | Code review + network tap | No outbound audio traffic during capture. |
 | NFR-4 | axe-core + manual SR pass | No critical violations; full keyboard flow works. |
+| FR-12 | Automated (Playwright, `context.setOffline(true)` after first load) | App boots and reaches the device-selection state offline. |
+| FR-13 | Manual | Deploying a new SW version, the next reload picks it up within one navigation cycle. |
+| NFR-9 | Same Playwright offline run | No console errors; capture path remains usable offline. |
 
 ---
 
@@ -258,17 +288,25 @@ The application MUST log diagnostic events to an in-page console panel
 - **Manual exploratory:** real hardware on each supported OS.
 - **Accessibility:** axe-core in CI plus manual screen-reader pass
   (NVDA, VoiceOver).
+- **Offline E2E:** Playwright test that loads the app online, then re-navigates
+  with `context.setOffline(true)` and asserts the device-selection UI renders
+  without console errors.
 
 ---
 
 ## 6. Open Questions
-1. Confirm product scope — is MicTest12-1.0 actually the mic-testing tool
-   described above, or something else (CLI, desktop, voice analytics)?
-2. Is offline / PWA support in scope for v1.0?
-3. Target launch date and supported-locale list?
-4. Any branding, design system, or accessibility constraints beyond WCAG AA?
-5. Should diagnostics include advanced metrics (THD, frequency response
-   sweep) in a later version?
+Resolved on 2026-05-02:
+- Product scope confirmed as a browser-based microphone testing utility.
+- Offline app-shell PWA support is in scope for v1.0; installability and
+  background features are out.
+- Supported locales at launch: English (`en`) only.
+- No third-party design system; minimal in-house styling. Accessibility
+  constraints remain WCAG 2.1 AA only.
+- Advanced metrics (THD, frequency-response sweep) are deferred to a
+  future version.
+
+Still open:
+1. Target launch date.
 
 ---
 
@@ -276,3 +314,4 @@ The application MUST log diagnostic events to an in-page console panel
 | Version | Date | Author | Notes |
 | --- | --- | --- | --- |
 | 0.1 | 2026-04-26 | Claude (draft) | Initial draft based on placeholder repo. |
+| 0.2 | 2026-05-02 | Claude (refine) | Resolved scope assumptions; added PWA app-shell scope (FR-12, FR-13, NFR-9); resolved Open Questions. |
