@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Calculator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    form { display: flex; gap: 0.5rem; }
+    input[type=text] { flex: 1; padding: 0.5rem; font-size: 1rem; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    .result { margin-top: 1rem; padding: 0.75rem; background: #f4f4f4; font-family: monospace; }
+    .result.error { background: #fdecea; color: #b00020; }
+    h2 { margin-top: 2rem; font-size: 1rem; }
+    ul { padding-left: 1.25rem; font-family: monospace; }
+    li { margin-bottom: 0.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Calculator</h1>
+  <form method="post">
+    <input type="text" name="expression" value="{{ expression }}" placeholder="e.g. 2 + 3 * (4 - 1)" autofocus>
+    <button type="submit">=</button>
+  </form>
+
+  {% if result is not none %}
+    <div class="result {% if result.startswith('Error:') %}error{% endif %}">
+      {{ expression }} = {{ result }}
+    </div>
+  {% endif %}
+
+  {% if history %}
+    <h2>Recent</h2>
+    <ul>
+      {% for expr, res in history %}
+        <li>{{ expr }} = {{ res }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</body>
+</html>
