@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f4f6;
+    --panel: #ffffff;
+    --text: #111;
+    --display-bg: #1c1c1e;
+    --display-text: #fff;
+    --btn: #e5e5ea;
+    --btn-text: #111;
+    --btn-op: #ff9500;
+    --btn-op-text: #fff;
+    --btn-fn: #a5a5ae;
+    --btn-fn-text: #111;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000;
+      --panel: #1c1c1e;
+      --text: #fff;
+      --btn: #333336;
+      --btn-text: #fff;
+      --btn-fn: #a5a5ae;
+      --btn-fn-text: #111;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .calculator {
+    width: min(100%, 360px);
+    background: var(--panel);
+    padding: 16px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  }
+  .display {
+    background: var(--display-bg);
+    color: var(--display-text);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    text-align: right;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    word-break: break-all;
+  }
+  .display .expression {
+    font-size: 0.9rem;
+    opacity: 0.6;
+    min-height: 1.2em;
+  }
+  .display .current {
+    font-size: 2.2rem;
+    font-weight: 300;
+  }
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  button {
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    height: 64px;
+    font-size: 1.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--btn);
+    color: var(--btn-text);
+    transition: filter 0.1s ease;
+  }
+  button:hover { filter: brightness(1.05); }
+  button:active { filter: brightness(0.9); }
+  button.op {
+    background: var(--btn-op);
+    color: var(--btn-op-text);
+  }
+  button.fn {
+    background: var(--btn-fn);
+    color: var(--btn-fn-text);
+  }
+  button.span-2 { grid-column: span 2; border-radius: 999px; }
+</style>
+</head>
+<body>
+  <main class="calculator" aria-label="Calculator">
+    <div class="display" aria-live="polite">
+      <div class="expression" id="expression"></div>
+      <div class="current" id="current">0</div>
+    </div>
+    <div class="keys">
+      <button class="fn" data-action="clear">AC</button>
+      <button class="fn" data-action="sign">+/-</button>
+      <button class="fn" data-action="percent">%</button>
+      <button class="op" data-op="/" aria-label="divide">÷</button>
+
+      <button data-digit="7">7</button>
+      <button data-digit="8">8</button>
+      <button data-digit="9">9</button>
+      <button class="op" data-op="*" aria-label="multiply">×</button>
+
+      <button data-digit="4">4</button>
+      <button data-digit="5">5</button>
+      <button data-digit="6">6</button>
+      <button class="op" data-op="-" aria-label="subtract">−</button>
+
+      <button data-digit="1">1</button>
+      <button data-digit="2">2</button>
+      <button data-digit="3">3</button>
+      <button class="op" data-op="+" aria-label="add">+</button>
+
+      <button class="span-2" data-digit="0">0</button>
+      <button data-action="dot">.</button>
+      <button class="op" data-action="equals" aria-label="equals">=</button>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const exprEl = document.getElementById('expression');
+      const currEl = document.getElementById('current');
+
+      const state = {
+        current: '0',
+        previous: null,
+        operator: null,
+        justEvaluated: false,
+      };
+
+      function render() {
+        currEl.textContent = state.current;
+        if (state.previous !== null && state.operator) {
+          exprEl.textContent = `${state.previous} ${displayOp(state.operator)}`;
+        } else {
+          exprEl.textContent = '';
+        }
+      }
+
+      function displayOp(op) {
+        return { '+': '+', '-': '−', '*': '×', '/': '÷' }[op] || op;
+      }
+
+      function inputDigit(d) {
+        if (state.justEvaluated) {
+          state.current = d;
+          state.justEvaluated = false;
+          state.previous = null;
+          state.operator = null;
+        } else if (state.current === '0') {
+          state.current = d;
+        } else {
+          state.current += d;
+        }
+      }
+
+      function inputDot() {
+        if (state.justEvaluated) {
+          state.current = '0.';
+          state.justEvaluated = false;
+          state.previous = null;
+          state.operator = null;
+          return;
+        }
+        if (!state.current.includes('.')) {
+          state.current += '.';
+        }
+      }
+
+      function clearAll() {
+        state.current = '0';
+        state.previous = null;
+        state.operator = null;
+        state.justEvaluated = false;
+      }
+
+      function toggleSign() {
+        if (state.current === '0') return;
+        state.current = state.current.startsWith('-')
+          ? state.current.slice(1)
+          : '-' + state.current;
+      }
+
+      function applyPercent() {
+        const n = parseFloat(state.current);
+        if (Number.isFinite(n)) state.current = formatNumber(n / 100);
+      }
+
+      function compute(a, b, op) {
+        switch (op) {
+          case '+': return a + b;
+          case '-': return a - b;
+          case '*': return a * b;
+          case '/': return b === 0 ? NaN : a / b;
+        }
+        return b;
+      }
+
+      function formatNumber(n) {
+        if (!Number.isFinite(n)) return 'Error';
+        const rounded = Math.round(n * 1e12) / 1e12;
+        return String(rounded);
+      }
+
+      function chooseOperator(op) {
+        const curr = parseFloat(state.current);
+        if (state.previous !== null && state.operator && !state.justEvaluated) {
+          const result = compute(parseFloat(state.previous), curr, state.operator);
+          state.previous = formatNumber(result);
+          state.current = state.previous;
+        } else {
+          state.previous = state.current;
+        }
+        state.operator = op;
+        state.justEvaluated = false;
+        state.current = '0';
+        // After choosing operator, next digit replaces current
+        state._awaitingOperand = true;
+      }
+
+      function equals() {
+        if (state.previous === null || !state.operator) return;
+        const result = compute(
+          parseFloat(state.previous),
+          parseFloat(state.current),
+          state.operator
+        );
+        state.current = formatNumber(result);
+        state.previous = null;
+        state.operator = null;
+        state.justEvaluated = true;
+      }
+
+      // Override inputDigit to handle awaiting-operand state cleanly
+      const _origInputDigit = inputDigit;
+      function inputDigitWrapped(d) {
+        if (state._awaitingOperand) {
+          state.current = d;
+          state._awaitingOperand = false;
+          return;
+        }
+        _origInputDigit(d);
+      }
+      function inputDotWrapped() {
+        if (state._awaitingOperand) {
+          state.current = '0.';
+          state._awaitingOperand = false;
+          return;
+        }
+        inputDot();
+      }
+
+      document.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.digit !== undefined) inputDigitWrapped(btn.dataset.digit);
+          else if (btn.dataset.op) chooseOperator(btn.dataset.op);
+          else if (btn.dataset.action === 'dot') inputDotWrapped();
+          else if (btn.dataset.action === 'clear') clearAll();
+          else if (btn.dataset.action === 'sign') toggleSign();
+          else if (btn.dataset.action === 'percent') applyPercent();
+          else if (btn.dataset.action === 'equals') equals();
+          render();
+        });
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (/^[0-9]$/.test(e.key)) inputDigitWrapped(e.key);
+        else if (['+', '-', '*', '/'].includes(e.key)) chooseOperator(e.key);
+        else if (e.key === '.') inputDotWrapped();
+        else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); equals(); }
+        else if (e.key === 'Escape') clearAll();
+        else if (e.key === '%') applyPercent();
+        else return;
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
