@@ -19,16 +19,17 @@ def tokenize(s):
             i += 1
             continue
         if c in "+-*/()":
-            tokens.append((c, c))
+            tokens.append((c, c, c))
             i += 1
             continue
         m = _NUMBER_RE.match(s, i)
         if m:
-            tokens.append(("NUM", float(m.group())))
+            text = m.group()
+            tokens.append(("NUM", float(text), text))
             i = m.end()
             continue
         raise CalcError(f"unexpected character {c!r} at position {i}")
-    tokens.append(("END", None))
+    tokens.append(("END", None, ""))
     return tokens
 
 
@@ -48,7 +49,7 @@ class _Parser:
     def parse(self):
         node = self.expr()
         if self.peek()[0] != "END":
-            raise CalcError(f"unexpected token {self.peek()[1]!r}")
+            raise CalcError(f"unexpected token {self.peek()[2]!r}")
         return node
 
     def expr(self):
@@ -84,7 +85,7 @@ class _Parser:
             return node
         if tok[0] == "END":
             raise CalcError("unexpected end of expression")
-        raise CalcError(f"unexpected token {tok[1]!r}")
+        raise CalcError(f"unexpected token {tok[2]!r}")
 
 
 def _eval(node):
